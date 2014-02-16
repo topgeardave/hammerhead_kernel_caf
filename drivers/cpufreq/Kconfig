@@ -186,6 +186,12 @@ config CPU_FREQ_DEFAULT_GOV_PEGASUSQ
 	help
 	  Use the CPUFreq governor 'pegasusq' as default.
 
+config CPU_FREQ_DEFAULT_GOV_INTERACTIVEF
+	bool "interactiveF"
+	select CPU_FREQ_GOV_INTERACTIVEF
+	help
+	  Use the CPUFreq governor 'interactiveF' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -410,6 +416,9 @@ config CPU_FREQ_GOV_NIGHTMARE
 
 config CPU_FREQ_GOV_PEGASUSQ
 	tristate "'pegasusq' cpufreq policy governor"
+
+config CPU_FREQ_GOV_INTERACTIVEF
+	tristate "'interactiveF' cpufreq policy governor"
 
 menu "x86 CPU frequency scaling drivers"
 depends on X86
