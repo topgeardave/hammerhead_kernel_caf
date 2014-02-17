@@ -1,7 +1,7 @@
 /*
  * Author: Alucard_24@XDA
  *
- * Copyright 2012 Alucard_24@XDA
+ * Copyright 2012-2014 Alucard_24@XDA
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -45,10 +45,10 @@ static struct hotplug_tuners {
 	atomic_t cpu_down_rate;
 	atomic_t maxcoreslimit;
 } hotplug_tuners_ins = {
-	.hotplug_sampling_rate = ATOMIC_INIT(60000),
-	.hotplug_enable = ATOMIC_INIT(0),
-	.cpu_up_rate = ATOMIC_INIT(2),
-	.cpu_down_rate = ATOMIC_INIT(2),
+	.hotplug_sampling_rate = ATOMIC_INIT(50000),
+	.hotplug_enable = ATOMIC_INIT(1),
+	.cpu_up_rate = ATOMIC_INIT(5),
+	.cpu_down_rate = ATOMIC_INIT(10),
 	.maxcoreslimit = ATOMIC_INIT(NR_CPUS),
 };
 
@@ -159,21 +159,21 @@ static unsigned hotplugging_rate = 0;
 
 static atomic_t hotplug_freq[4][2] = {
 	{ATOMIC_INIT(0), ATOMIC_INIT(960000)},
-	{ATOMIC_INIT(652800), ATOMIC_INIT(960000)},
-	{ATOMIC_INIT(652800), ATOMIC_INIT(960000)},
-	{ATOMIC_INIT(652800), ATOMIC_INIT(0)}
+	{ATOMIC_INIT(652800), ATOMIC_INIT(1036800)},
+	{ATOMIC_INIT(729600), ATOMIC_INIT(1190400)},
+	{ATOMIC_INIT(883200), ATOMIC_INIT(0)}
 };
 static atomic_t hotplug_load[4][2] = {
-	{ATOMIC_INIT(0), ATOMIC_INIT(65)},
-	{ATOMIC_INIT(30), ATOMIC_INIT(65)},
-	{ATOMIC_INIT(30), ATOMIC_INIT(65)},
-	{ATOMIC_INIT(30), ATOMIC_INIT(0)}
+	{ATOMIC_INIT(0), ATOMIC_INIT(40)},
+	{ATOMIC_INIT(20), ATOMIC_INIT(50)},
+	{ATOMIC_INIT(30), ATOMIC_INIT(60)},
+	{ATOMIC_INIT(40), ATOMIC_INIT(0)}
 };
 static atomic_t hotplug_rq[4][2] = {
 	{ATOMIC_INIT(0), ATOMIC_INIT(100)},
-	{ATOMIC_INIT(100), ATOMIC_INIT(200)},
-	{ATOMIC_INIT(200), ATOMIC_INIT(300)},
-	{ATOMIC_INIT(300), ATOMIC_INIT(0)}
+	{ATOMIC_INIT(100), ATOMIC_INIT(150)},
+	{ATOMIC_INIT(150), ATOMIC_INIT(200)},
+	{ATOMIC_INIT(200), ATOMIC_INIT(0)}
 };
 
 #define show_one(file_name, object)					\
@@ -615,9 +615,9 @@ static void __cpuinit hotplug_work_fn(struct work_struct *work)
 						&& per_cpu(od_hotplug_cpuinfo, cpu).up_cpu > 0
 						&& schedule_up_cpu > 0
 						&& offline_cpu >= 0
-						&& cur_load >= up_load
-						&& cur_freq >= up_freq
-						&& rq_avg > up_rq) {
+						&& (cur_load >= up_load
+						|| (cur_freq >= up_freq
+						&& rq_avg > up_rq))) {
 							--schedule_up_cpu;
 							per_cpu(od_hotplug_cpuinfo, offline_cpu).online = true;
 							per_cpu(od_hotplug_cpuinfo, offline_cpu).up_by_cpu = cpu;
@@ -625,9 +625,10 @@ static void __cpuinit hotplug_work_fn(struct work_struct *work)
 							cpu_up(offline_cpu);
 					}
 					if (check_down
-						&& cpu > 0
+						&& cpu == (online_cpus - 1)
 						&& schedule_down_cpu > 0
 						&& cpu != offline_cpu
+						&& cpu != 0
 						&& cur_load >= 0) {
 							if (cur_load < down_load
 								|| (cur_freq <= down_freq
@@ -698,9 +699,8 @@ int __init alucard_hotplug_init(void)
 	mutex_unlock(&alucard_hotplug_mutex);
 
 	delay = usecs_to_jiffies(atomic_read(&hotplug_tuners_ins.hotplug_sampling_rate));
-	if (num_online_cpus() > 1) {
+	if (num_online_cpus() > 1)
 		delay -= jiffies % delay;
-	}
 	INIT_DELAYED_WORK(&alucard_hotplug_work, hotplug_work_fn);
 	schedule_delayed_work_on(0, &alucard_hotplug_work, delay);
 
@@ -712,7 +712,7 @@ static void __exit alucard_hotplug_exit(void)
 	cancel_delayed_work_sync(&alucard_hotplug_work);
 	mutex_destroy(&timer_mutex);
 }
-MODULE_AUTHOR("Alucard_24@XDA");
+MODULE_AUTHOR("Alucard_24@XDA / NeoBuddy89");
 MODULE_DESCRIPTION("'alucard_hotplug' - A cpu hotplug driver for "
 	"capable processors");
 MODULE_LICENSE("GPL");
